@@ -94,7 +94,8 @@ int main()
             SIGINT,
             handleSignal
         );
-
+        
+        std::signal(SIGPIPE, SIG_IGN);
 
         // ----------------------------------------------------
         // Create objects

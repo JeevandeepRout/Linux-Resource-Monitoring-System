@@ -1,25 +1,18 @@
-# Compiled executables
-client/client
-server/server
+# Build files
+build/
+
+# Logs
+logs/*.log
+
+# CSV data
+data/*.csv
 
 # Object files
 *.o
 
-# Dependency files
-*.d
-
-# Logs
-*.log
-
-# Temporary files
-*.tmp
-*.temp
-*~
-
-# Editors
-.vscode/
+# IDE files
 .idea/
+.vscode/
 
 # OS files
 .DS_Store
-Thumbs.db
