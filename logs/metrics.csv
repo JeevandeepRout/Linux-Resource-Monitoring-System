@@ -1,0 +1,2 @@
+timestamp,client_id,hostname,kernel_version,cpu_usage,memory_usage,disk_usage,process_count,uptime_seconds
+1790943339,PC-TEST,Ubuntu,7.0.0-test,25.5,65.2,40.1,300,10000

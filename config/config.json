@@ -1,0 +1,26 @@
+{
+    "server": {
+        "host": "127.0.0.1",
+        "port": 5000
+    },
+
+    "client": {
+        "interval": 5,
+        "retry_interval": 5
+    },
+
+    "thresholds": {
+        "cpu_warning": 70,
+        "cpu_critical": 90,
+
+        "memory_warning": 70,
+        "memory_critical": 90,
+
+        "disk_warning": 70,
+        "disk_critical": 90
+    },
+
+    "heartbeat": {
+        "timeout": 15
+    }
+}
