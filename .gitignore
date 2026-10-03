@@ -1,10 +1,6 @@
-# Build output
-build/
-
 # Compiled executables
-client
-server
-main
+client/client
+server/server
 
 # Object files
 *.o
@@ -12,12 +8,7 @@ main
 # Dependency files
 *.d
 
-# Debugging / crash files
-*.gdb
-core
-core.*
-
-# Log files
+# Logs
 *.log
 
 # Temporary files
@@ -25,12 +16,10 @@ core.*
 *.temp
 *~
 
-# VS Code
+# Editors
 .vscode/
-
-# CLion / JetBrains
 .idea/
 
-# OS generated files
+# OS files
 .DS_Store
 Thumbs.db
