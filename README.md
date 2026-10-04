@@ -2,19 +2,7 @@
 
 A distributed, event-driven Linux system monitoring suite engineered for low-overhead fleet observability. Probes kernel metrics directly from the `/proc` virtual filesystem and POSIX `statvfs` APIs, streaming real-time system vitals over framed TCP sockets to a central multi-client server featuring dynamic multi-tier anomaly alerting, historical CSV persistence, and an interactive terminal dashboard.
 
-[Live Terminal Preview](#%EF%B8%8F-live-dashboard-preview) • [Features](#-key-features) • [Architecture](#%EF%B8%8F-system-architecture) • [Wire Protocol](#-wire-protocol-specification) • [Quick Start](#-quick-start) • [Directory Tree](#-directory-structure) • [Testing & Resilience](#-testing--resilience-matrix) • [Roadmap](#%EF%B8%8F-future-roadmap)
-
----
-
-## 📑 Table of Contents
-
-| 📖 Discover | ⚙️ Deploy | 🔬 Deep Dive |
-| :--- | :--- | :--- |
-| 🔭 [Overview](#-overview) | 🧰 [Prerequisites & Toolchain](#-prerequisites--toolchain) | 🏛️ [System Architecture](#%EF%B8%8F-system-architecture) |
-| 🖥️ [Dashboard Preview](#%EF%B8%8F-live-dashboard-preview) | 🔨 [Compilation & Build](#-compilation--build) | 📡 [Wire Protocol](#-wire-protocol-specification) |
-| ⚡ [Key Features](#-key-features) | 🚀 [Quick Start Guide](#-quick-start) | 📂 [Directory Structure](#-directory-structure) |
-| 🗺️ [Future Roadmap](#%EF%B8%8F-future-roadmap) | ⚙️ [Configuration Reference](#%EF%B8%8F-configuration-reference) | 🧪 [Testing & Resilience](#-testing--resilience-matrix) |
-| | 🔍 [Limitations](#-architectural-considerations--limitations) | |
+[Live Terminal Preview](#%EF%B8%8F-live-dashboard-preview) • [Features](#-key-features) • [Architecture](#%EF%B8%8F-system-architecture) • [Wire Protocol](#-wire-protocol-specification) • [Quick Start](#-quick-start) • [Directory Tree](#-directory-structure) • [Testing & Resilience](#-testing--resilience-matrix) • [Future Roadmap](#%EF%B8%8F-future-roadmap)
 
 ---
 
