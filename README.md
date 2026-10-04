@@ -243,15 +243,7 @@ make test
 
 ---
 
-## 📄 License
-
-This project is open-source and available under the MIT License.
-
----
-
 <div align="center">
-
-### 👨‍💻 Jeevandeep Rout
 
 *A hands-on deep dive into Linux system programming, C++ networking and monitoring architecture.*
 
