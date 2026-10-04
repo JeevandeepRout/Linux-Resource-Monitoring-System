@@ -262,6 +262,4 @@ This project is open-source and available under the MIT License.
 <a href="https://github.com/JeevandeepRout/Linux-Resource-Monitoring-System/issues">Report Bug</a> •
 <a href="https://github.com/JeevandeepRout/Linux-Resource-Monitoring-System/issues">Request Feature</a>
 
-<img src="https://capsule-render.vercel.app/api?type=waving&color=0:2c5364,50:203a43,100:0f2027&height=100&section=footer" alt="footer" width="100%"/>
-
 </div>
