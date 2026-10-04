@@ -2,34 +2,34 @@
 
 A distributed, event-driven Linux system monitoring suite engineered for low-overhead fleet observability. Probes kernel metrics directly from the `/proc` virtual filesystem and POSIX `statvfs` APIs, streaming real-time system vitals over framed TCP sockets to a central multi-client server featuring dynamic multi-tier anomaly alerting, historical CSV persistence, and an interactive terminal dashboard.
 
-[Live Terminal Preview](#%EF%B8%8F-live-dashboard-preview) • [Features](#-key-features) • [Architecture](#%EF%B8%8F-system-architecture) • [Wire Protocol](#-wire-protocol-specification) • [Quick Start](#-quick-start) • [Directory Tree](#-directory-structure) • [Testing & Resilience](#-testing--resilience-matrix) • [Future Roadmap](#%EF%B8%8F-future-roadmap)
+[Live Terminal Preview](#%EF%B8%8F-dashboard-preview) • [Features](#-key-features) • [Architecture](#-how-it-works) • [Wire Protocol](#-wire-protocol) • [Quick Start](#-quick-start) • [Project Structure](#-project-structure) • [Testing & Resilience](#-testing--resilience-matrix) • [Roadmap](#%EF%B8%8F-future-roadmap)
 
 ---
 
 ## 🔭 Overview
 
-The Linux Resource Monitoring System is a distributed, client-server monitoring solution developed from scratch in modern C++17. It delivers lightweight, low-overhead system observability across heterogeneous Linux nodes without relying on heavy external runtime agents or high-footprint daemons.
+The **Linux Resource Monitoring System** is a distributed, client-server monitoring solution developed entirely from scratch in modern C++17. Instead of relying on heavy external runtime frameworks, it achieves ultra-low-overhead observability by interfacing directly with the Linux kernel and utilizing raw TCP sockets.
 
-```text
-┌─────────────────┐    TCP Stream (NDJSON)    ┌─────────────────┐
-│   Client Node   │ ────────────────────────> │ Central Server  │
-│ (/proc, statvfs)│ <──────────────────────── │   (Port 5000)   │
-└─────────────────┘           ACK             └────────┬────────┘
-                                                       │
-         ┌─────────────────────────────────────────────┼──────────────────────────────────────┐
-         ▼                                             ▼                                      ▼
-  [ Alert Manager ]                            [ Historical CSV ]                   [ Terminal Dashboard ]
-NORMAL/WARNING/CRITICAL                        logs/metrics.csv                     Real-Time Fleet TUI
+- **The Client Daemon:** A lightweight agent running on monitored Linux nodes. It generates a persistent hardware identity and directly probes kernel pseudo-filesystems (`/proc/stat`, `/proc/meminfo`, `/proc/uptime`, `statvfs`) to compute real-time metrics without any costly subshell forks.
+- **The Central Server:** A concurrent TCP server that aggregates telemetry from across the fleet. It performs NDJSON stream reassembly and strict payload validation, maintains client heartbeat states, evaluates multi-tier anomaly thresholds, and drives both a live terminal dashboard and persistent CSV auditing.
+
+```mermaid
+flowchart LR
+    subgraph L["🐧 Linux machine"]
+        A["/proc/stat · /proc/meminfo<br/>/proc/uptime · statvfs()<br/>process list"] --> M["SystemMonitor"]
+    end
+    M -- "newline-delimited JSON<br/>over TCP" --> S
+    subgraph SRV["🛰️ Server :5000"]
+        S["Accept → Parse → Validate"] --> R["Client Registry"] --> ST["Status + Alerts"]
+    end
+    ST --> DB["📺 Dashboard"]
+    ST --> AL["🔔 Alerts"]
+    ST --> CSV["💾 CSV + Logs"]
 ```
-
-- **The Client**: A lean agent running on monitored Linux systems. It parses raw kernel counters (`/proc/stat`, `/proc/meminfo`, `/proc/uptime`, `statvfs`), computes real-time performance indicators (CPU %, memory %, storage %, process counts), and streams framed JSON packets to the central server.
-- **The Central Server**: A concurrent TCP server listening on port 5000. It performs stream reassembly, strict payload validation, maintains client heartbeat state, triggers multi-level threshold alerts (`NORMAL`, `WARNING`, `CRITICAL`, `OFFLINE`), commits audit trails to disk, and presents a live terminal dashboard.
 
 ---
 
-## 🖥️ Live Dashboard Preview
-
-The central server renders a real-time terminal UI summarizing active fleet topology, resource consumption, and health statuses:
+## 🖥️ Dashboard Preview
 
 ```text
 ==============================================
@@ -61,332 +61,86 @@ Dashboard refresh interval: 2 seconds
 
 ---
 
-## 🏛️ System Architecture
-
-### High-Level Data Flow
+## 🔬 How It Works
 
 ```mermaid
-graph TD
-    subgraph Host ["Monitored Linux Machine"]
-        A["Kernel Subsystems<br/>(/proc, statvfs)"] -->|"Sample Kernel Counters"| B["SystemMonitor"]
-        B -->|"Aggregate Metrics"| C["SystemData Object"]
-        C -->|"Serialize"| D["nlohmann::json (NDJSON)"]
-        D -->|"Buffered Write"| E["NetworkClient (POSIX Socket)"]
+sequenceDiagram
+    autonumber
+    participant C as 🐧 Client
+    participant S as 🛰️ Server
+    loop every few seconds
+        C->>C: Read /proc + statvfs, build JSON
+        C->>S: metrics message + "\n"
+        S->>S: Validate, update registry, set status
+        S->>S: Append CSV row, refresh dashboard
     end
-    
-    E ==>|"TCP Port 5000 (\n framed)"| F["Server Socket Listener"]
-    
-    subgraph Server ["Central Management Server"]
-        F -->|"Stream Buffer"| G["Message Framing & Deframer"]
-        G -->|"Raw JSON Tokens"| H["JSON Validator"]
-        H -->|"Sanitized Telemetry"| I["ClientRegistry"]
-        I -->|"State & Threshold Check"| J["AlertManager"]
-        I -->|"Time-Series Append"| K["CsvLogger (logs/metrics.csv)"]
-        I -->|"Audit Event Trail"| L["Logger (server.log)"]
-        I -->|"Fleet Terminal Render"| M["Dashboard TUI"]
-        H -.->|"ACK Packet"| E
-    end
-
-    classDef host fill:#1e293b,stroke:#38bdf8,stroke-width:2px,color:#f8fafc;
-    classDef server fill:#0f172a,stroke:#a855f7,stroke-width:2px,color:#f8fafc;
-    class Host host;
-    class Server server;
+    Note over C,S: If the connection drops, the client retries
 ```
 
-### Client Lifecycle
-
-```text
-[ Startup ]
- │
- ▼
-[ Generate / Read Client Identity ] ──► (e.g. PC-945742)
- │
- ▼
-[ Connect to TCP Server (127.0.0.1:5000) ]
- │
- ├─► [ Connection Failed ] ──► Sleep (retry_interval: 5s) ──► Loop back
- │
- └─► [ Connected ]
-      │
-      ├─► 1. Query /proc/stat, /proc/meminfo, /proc/uptime, statvfs
-      ├─► 2. Package into SystemData
-      ├─► 3. Serialize to JSON + append '\n'
-      ├─► 4. Send over TCP Socket
-      ├─► 5. Await Server ACK (optional validation)
-      ├─► 6. Sleep for configured interval (5s)
-      └─► Loop to step 1
-```
-
-### Server Event Loop & Ingestion
-
-```text
-[ TCP Socket Bind & Listen ]
- │
- ▼
-[ Accept Client Connection ]
- │
- ▼
-[ Read Stream Buffer ]
- │
- ├── Accumulate bytes in connection buffer
- ├── Split on '\n' delimiter
- └── For each extracted line:
-      │
-      ├── Parse JSON (nlohmann::json)
-      │    └─ Failure ──► Reject & log warning (Server stays online)
-      │
-      ├── Validate Ranges (CPU/Mem/Disk in 0.0..100.0, process_count > 0)
-      │    └─ Invalid ──► Discard malformed packet
-      │
-      ├── Update ClientRegistry (update last_seen timestamp)
-      ├── Evaluate Thresholds (NORMAL -> WARNING -> CRITICAL)
-      ├── Append to logs/metrics.csv
-      └── Refresh Terminal Dashboard UI
-```
+| 💡 Decision | 🎯 Why |
+|---|---|
+| **CPU % from two `/proc/stat` samples** | Counters are cumulative: `(Δtotal − Δidle) / Δtotal × 100`. |
+| **`MemAvailable`, not `MemFree`** | `MemFree` ignores reclaimable cache and overstates usage. |
+| **Newline-delimited JSON** | TCP has no message boundaries; `\n` gives simple framing. |
+| **Server never trusts input** | Messages are parsed and range-checked before touching state. |
+| **~15 s heartbeat timeout** | A silent client is marked `OFFLINE`. |
 
 ---
 
-## 📡 Wire Protocol Specification
+## 🚦 Status Logic
 
-The system uses an application-level **Newline-Delimited JSON (NDJSON)** protocol over persistent TCP/IPv4 connections. Every transmission is terminated by a strict newline character (`\n` or `0x0A`).
-
-### Frame Structure (NDJSON)
-
-```text
-┌─────────────────────────────────────────────────────────────┬──────┐
-│ Valid JSON Payload Object                                   │  \n  │
-│ {"type":"metrics", "client_id":"PC-01", "cpu_usage":42.5}   │ 0x0A │
-└─────────────────────────────────────────────────────────────┴──────┘
+```mermaid
+stateDiagram-v2
+    [*] --> NORMAL
+    NORMAL --> WARNING: usage ≥ warning threshold
+    WARNING --> CRITICAL: usage ≥ critical threshold
+    CRITICAL --> WARNING: usage drops
+    WARNING --> NORMAL: usage drops
+    NORMAL --> OFFLINE: no data within timeout
+    WARNING --> OFFLINE: no data within timeout
+    CRITICAL --> OFFLINE: no data within timeout
+    OFFLINE --> NORMAL: client reports again
 ```
 
-### Telemetry Payload Schema (metrics)
+The rule applies to CPU, memory and disk, and `AlertManager` tracks state transitions. Active thresholds are currently set directly in `Server.cpp`.
 
-Emitted periodically by clients:
+---
+
+## 📦 Wire Protocol
+
+One JSON object per line, terminated by `\n`:
 
 ```json
 {
-    "type": "metrics",
-    "client_id": "PC-945742",
-    "hostname": "prod-ubuntu-server",
-    "kernel_version": "6.8.0-45-generic",
-    "cpu_usage": 42.50,
-    "memory_usage": 61.30,
-    "disk_usage": 72.10,
-    "process_count": 184,
-    "uptime_seconds": 18342,
-    "timestamp": 1790810100
+    "type": "metrics", "client_id": "PC-945742", "hostname": "Ubuntu",
+    "kernel_version": "7.0.0-38-generic",
+    "cpu_usage": 3.53, "memory_usage": 70.68, "disk_usage": 34.09,
+    "process_count": 310, "uptime_seconds": 5996.45, "timestamp": 1791042240
 }
 ```
 
-**Field Specifications:**
-
-| Key | Type | Unit | Range / Constraints | Description |
-| :--- | :--- | :--- | :--- | :--- |
-| `type` | string | — | Must equal "metrics" | Message descriptor |
-| `client_id` | string | — | Non-empty, alphanumeric | Persistent host identifier |
-| `hostname` | string | — | ASCII string | Host network name |
-| `kernel_version` | string | — | SemVer / Release | Operating system kernel release |
-| `cpu_usage` | float | % | 0.00 to 100.00 | Current CPU core utilization |
-| `memory_usage` | float | % | 0.00 to 100.00 | Active RAM consumption ratio |
-| `disk_usage` | float | % | 0.00 to 100.00 | Root filesystem (`/`) block utilization |
-| `process_count` | integer | count | >= 1 | Total active threads/tasks |
-| `uptime_seconds` | integer | seconds | >= 0 | Total seconds since host boot |
-| `timestamp` | integer | seconds | POSIX Epoch | Client sampling timestamp |
-
-### Server Acknowledgment (ack)
-
-Transmitted by the server to confirm receipt and ingestion:
-
-```json
-{
-    "type": "ack",
-    "status": "accepted",
-    "timestamp": 1790810100
-}
-```
-
-### TCP Stream Buffering & Deframing
-
-Because TCP is a continuous byte-stream protocol that makes no guarantees about message boundaries, network fragmentation may split a single JSON payload across multiple read operations, or bundle multiple packets into one buffer.
-
-**The Server's Framing Algorithm:**
-
-```text
-Incoming Stream ──► [ Accumulator Buffer ] ──► Find First '\n'
-                                                 ▲           │
-                                                 │   Found:  ├─► No: Wait for next read()
-                                                 │           └─► Yes: Slice [0 .. index]
-                                                 │                  │
-                                                 │                  ├──► Dispatch to JSON Parser
-                                                 └────── Strip processed slice ◄───────┘
-```
-
-1. Accumulates incoming raw socket chunks into a per-client heap buffer.
-2. Scans for the `\n` boundary delimiter.
-3. Slices the complete JSON token string.
-4. Leaves any remaining partial frame bytes in the buffer for subsequent socket reads.
-
----
-
-## 🧰 Prerequisites & Toolchain
-
-The monitor relies strictly on native Linux kernel interfaces (`/proc`, `statvfs`) and standard POSIX socket libraries.
-
-**Software Requirements:**
-- **Operating System:** Linux (Ubuntu 20.04+, Debian 11+, Arch Linux, Fedora 38+, or equivalent)
-- **Compiler:** `g++` with C++17 support
-- **Build System:** `make`
-- **Libraries:** `nlohmann/json` (Modern C++ JSON parser)
-- **Testing Utilities:** `netcat` (`nc`)
-
-**One-Line Dependency Installation:**
-
-*Ubuntu / Debian:*
-```bash
-sudo apt update && sudo apt install -y build-essential nlohmann-json3-dev netcat-openbsd
-```
-
-*Fedora / RHEL:*
-```bash
-sudo dnf install -y gcc-c++ make json-devel nc
-```
-
-*Arch Linux:*
-```bash
-sudo pacman -S --needed base-devel nlohmann-json openbsd-netcat
-```
-
-**Environment Verification:**
-```bash
-g++ --version | head -n 1 && make --version | head -n 1
-```
-
----
-
-## 🔨 Compilation & Build
-
-The project features a modular, multi-target Makefile supporting clean compilation, individual target builds, and automated testing suites:
-
-```bash
-# Clone the repository
-git clone https://github.com/JeevandeepRout/Linux-Resource-Monitoring-System.git
-cd linux-resource-monitoring-system
-
-# Compile everything (client, server, and test binaries)
-make
-```
-
-**Build Targets:**
-
-| Command | Action | Output Artifacts |
-| :--- | :--- | :--- |
-| `make` | Full build of client and server binaries | `build/client`, `build/server` |
-| `make client` | Compile client daemon only | `build/client` |
-| `make server` | Compile central server and dashboard engine | `build/server` |
-| `make test` | Compile and run all unit & integration tests | `test_metrics`, `test_protocol` |
-| `make clean` | Remove all compiled binaries and intermediate objects | Clears `build/` |
+🛡️ **Rejected, not crashed on:** missing fields · malformed JSON · invalid values · out-of-range values (e.g. `"cpu_usage": 500`) · invalid client messages.
 
 ---
 
 ## 🚀 Quick Start
 
-Get your monitoring cluster running locally in under 30 seconds across two terminal windows.
-
-### 1. Launch the Central Server
-
-Open the first terminal:
+> [!TIP]
+> Needs a Linux machine with `g++` and `make`. Defaults to `127.0.0.1:5000`.
 
 ```bash
-# Navigate to project directory
-cd linux-resource-monitoring-system
+sudo apt update && sudo apt install build-essential nlohmann-json3-dev netcat-openbsd
+git clone https://github.com/JeevandeepRout/Linux-Resource-Monitoring-System.git
+cd Linux-Resource-Monitoring-System
+make                  # also: make client | make server | make clean | make test
 
-# Run the central server
-./build/server
+./build/server        # Terminal 1
+./build/client        # Terminal 2, then watch the server dashboard 🎉
 ```
-
-*Expected output:*
-```text
-[INFO] Server socket created successfully.
-[INFO] Socket bound to 0.0.0.0:5000.
-[INFO] Central server listening for incoming client connections...
-```
-*(The terminal will switch into live dashboard display mode as soon as client streams register.)*
-
-### 2. Deploy the Client Daemon
-
-Open a second terminal:
-
-```bash
-# Navigate to project directory
-cd linux-resource-monitoring-system
-
-# Run the client daemon
-./build/client
-```
-
-*Expected output:*
-```text
-[INFO] Client Identity Initialized: PC-945742
-[INFO] Connecting to central server at 127.0.0.1:5000...
-[INFO] Connection established successfully!
-[INFO] Streaming system telemetry every 5 seconds...
-[METRIC] CPU: 38.2% | MEM: 58.1% | DISK: 64.0% | PROCS: 210 | STATUS: OK
-```
-
-> **Tip**: To stop either process cleanly, press `Ctrl+C`. Both binaries intercept SIGINT to close sockets and flush logs safely without leaving dangling descriptors.
 
 ---
 
-## ⚙️ Configuration Reference
-
-Application settings are centrally managed via JSON in `config/config.json`:
-
-```json
-{
-    "server": {
-        "host": "127.0.0.1",
-        "port": 5000
-    },
-    "client": {
-        "interval": 5,
-        "retry_interval": 5
-    },
-    "thresholds": {
-        "cpu_warning": 70,
-        "cpu_critical": 90,
-        "memory_warning": 70,
-        "memory_critical": 90,
-        "disk_warning": 70,
-        "disk_critical": 90
-    },
-    "heartbeat": {
-        "timeout": 15
-    }
-}
-```
-
-**Parameter Documentation:**
-
-| Category | Parameter | Default | Type | Purpose |
-| :--- | :--- | :--- | :--- | :--- |
-| `server` | `host` | "127.0.0.1" | string | Interface IP address for the listener |
-| `server` | `port` | 5000 | integer | TCP port for wire protocol ingress |
-| `client` | `interval` | 5 | integer | Telemetry sampling rate in seconds |
-| `client` | `retry_interval` | 5 | integer | Reconnection backoff interval upon network drop |
-| `thresholds` | `cpu_warning` | 70 | integer | CPU % threshold triggering WARNING status |
-| `thresholds` | `cpu_critical` | 90 | integer | CPU % threshold triggering CRITICAL status |
-| `thresholds` | `memory_warning` | 70 | integer | RAM % threshold triggering WARNING status |
-| `thresholds` | `memory_critical` | 90 | integer | RAM % threshold triggering CRITICAL status |
-| `thresholds` | `disk_warning` | 70 | integer | Disk % threshold triggering WARNING status |
-| `thresholds` | `disk_critical` | 90 | integer | Disk % threshold triggering CRITICAL status |
-| `heartbeat` | `timeout` | 15 | integer | Seconds of silence before node marked OFFLINE |
-
-> **Important Implementation Note:**
-> The project includes a dedicated `ConfigLoader` module. In the current iteration, active threshold constants are statically referenced in `server/Server.cpp`. Modifying `config/config.json` provides the blueprint for dynamic configuration reloading, which is targeted for seamless integration in the next release cycle.
-
----
-
-## 📂 Directory Structure
+## 📂 Project Structure
 
 ```text
 linux-resource-monitoring-system/
@@ -480,24 +234,12 @@ make test
 
 ---
 
-## 🔍 Architectural Considerations & Limitations
-
-- **Persistent Client Identity Across Local Processes**: The current hardware signature algorithm ties client identity to machine-level identifiers. Consequently, launching multiple client processes on the exact same physical machine shares the same identity token (`PC-XXXXXX`), appearing as a single logical entity in the server registry.
-- **Linux-Specific Kernel Dependencies**: Telemetry collectors directly read `/proc/stat`, `/proc/meminfo`, `/proc/uptime`, and invoke `statvfs()`. This codebase is optimized specifically for Linux systems and cannot run directly on Windows or macOS without a virtualization or container layer.
-- **Unencrypted TCP Transport**: The current transport layer utilizes raw TCP sockets without TLS encryption or cryptographic authentication. Deployment in untrusted or public network environments should be fronted with a secure tunnel (e.g., WireGuard, SSH tunnel, or TLS proxy).
-- **CSV-Based Storage Engine**: Metrics are currently persisted in append-only CSV format (`logs/metrics.csv`). For large-scale enterprise deployments tracking hundreds of nodes, a specialized time-series database (such as SQLite, InfluxDB, or Prometheus) is recommended.
-
----
-
 ## 🗺️ Future Roadmap
 
 - [ ] **Dynamic Configuration**: Wire `ConfigLoader` into live server state to allow dynamic threshold updates without recompilation.
 - [ ] **Transport Security**: Integrate OpenSSL / TLS 1.3 encryption with client-side mutual TLS (mTLS) authentication.
-- [ ] **Database Persistence**: Introduce an embedded SQLite / DuckDB storage engine with automated retention and downsampling.
-- [ ] **Web Dashboard**: Build a lightweight, responsive WebSocket-driven web UI with interactive Chart.js / Grafana visualizations.
-- [ ] **Containerization**: Provide official multi-stage `Dockerfile` and `docker-compose.yml` configurations for instant deployment.
-- [ ] **Extended Metrics**: Collect network interface throughput (`/proc/net/dev`), per-core CPU temperature sensors, and top CPU-consuming processes.
-- [ ] **Daemon Management**: Provide pre-configured systemd unit files (`lsm-client.service`, `lsm-server.service`) for production daemonization.
+- [ ] **Database Persistence**: Introduce an embedded SQLite storage engine with automated retention.
+- [ ] **Web Dashboard**: Build a lightweight, responsive WebSocket-driven web UI.
 
 ---
 
@@ -508,13 +250,18 @@ This project is open-source and available under the MIT License.
 ---
 
 <div align="center">
-  <b>Linux Resource Monitoring System</b><br>
-  <i>Engineered for high-performance fleet observability</i><br><br>
-  
-  <a href="https://github.com/JeevandeepRout/Linux-Resource-Monitoring-System/issues">Report Bug</a> •
-  <a href="https://github.com/JeevandeepRout/Linux-Resource-Monitoring-System/issues">Request Feature</a> •
-  <a href="#-linux-resource-monitoring-system">Back to Top</a>
-  <br><br>
-  
-  <p>Developed and maintained by <a href="https://github.com/JeevandeepRout">JeevandeepRout</a></p>
+
+### 👨‍💻 Jeevandeep Rout
+
+*A hands-on deep dive into Linux system programming, C++ networking and monitoring architecture.*
+
+⭐ If this project helped or interested you, consider giving it a star!
+
+<br>
+
+<a href="https://github.com/JeevandeepRout/Linux-Resource-Monitoring-System/issues">Report Bug</a> •
+<a href="https://github.com/JeevandeepRout/Linux-Resource-Monitoring-System/issues">Request Feature</a>
+
+<img src="https://capsule-render.vercel.app/api?type=waving&color=0:2c5364,50:203a43,100:0f2027&height=100&section=footer" alt="footer" width="100%"/>
+
 </div>
