@@ -2,32 +2,19 @@
 
 A distributed, event-driven Linux system monitoring suite engineered for low-overhead fleet observability. Probes kernel metrics directly from the `/proc` virtual filesystem and POSIX `statvfs` APIs, streaming real-time system vitals over framed TCP sockets to a central multi-client server featuring dynamic multi-tier anomaly alerting, historical CSV persistence, and an interactive terminal dashboard.
 
-[Features](#-key-features) • [Live Terminal Preview](#%EF%B8%8F-live-dashboard-preview) • [Architecture](#%EF%B8%8F-system-architecture) • [Wire Protocol](#-wire-protocol-specification) • [Quick Start](#-quick-start) • [Directory Tree](#-directory-structure) • [Testing & Resilience](#-testing--resilience-matrix) • [Roadmap](#%EF%B8%8F-future-roadmap)
+[Live Terminal Preview](#%EF%B8%8F-live-dashboard-preview) • [Features](#-key-features) • [Architecture](#%EF%B8%8F-system-architecture) • [Wire Protocol](#-wire-protocol-specification) • [Quick Start](#-quick-start) • [Directory Tree](#-directory-structure) • [Testing & Resilience](#-testing--resilience-matrix) • [Roadmap](#%EF%B8%8F-future-roadmap)
 
 ---
 
 ## 📑 Table of Contents
 
-- [Overview](#-overview)
-- [Live Dashboard Preview](#%EF%B8%8F-live-dashboard-preview)
-- [Key Features](#-key-features)
-- [System Architecture](#%EF%B8%8F-system-architecture)
-  - [High-Level Data Flow](#high-level-data-flow)
-  - [Client Lifecycle](#client-lifecycle)
-  - [Server Event Loop & Ingestion](#server-event-loop--ingestion)
-- [Wire Protocol Specification](#-wire-protocol-specification)
-  - [Frame Structure (NDJSON)](#frame-structure-ndjson)
-  - [Telemetry Payload Schema](#telemetry-payload-schema-metrics)
-  - [Server Acknowledgment](#server-acknowledgment-ack)
-  - [TCP Stream Buffering & Deframing](#tcp-stream-buffering--deframing)
-- [Prerequisites & Toolchain](#-prerequisites--toolchain)
-- [Compilation & Build](#-compilation--build)
-- [Quick Start Guide](#-quick-start)
-- [Configuration Reference](#%EF%B8%8F-configuration-reference)
-- [Directory Structure](#-directory-structure)
-- [Testing & Resilience Matrix](#-testing--resilience-matrix)
-- [Architectural Considerations & Limitations](#-architectural-considerations--limitations)
-- [Future Roadmap](#%EF%B8%8F-future-roadmap)
+| 📖 Discover | ⚙️ Deploy | 🔬 Deep Dive |
+| :--- | :--- | :--- |
+| 🔭 [Overview](#-overview) | 🧰 [Prerequisites & Toolchain](#-prerequisites--toolchain) | 🏛️ [System Architecture](#%EF%B8%8F-system-architecture) |
+| 🖥️ [Dashboard Preview](#%EF%B8%8F-live-dashboard-preview) | 🔨 [Compilation & Build](#-compilation--build) | 📡 [Wire Protocol](#-wire-protocol-specification) |
+| ⚡ [Key Features](#-key-features) | 🚀 [Quick Start Guide](#-quick-start) | 📂 [Directory Structure](#-directory-structure) |
+| 🗺️ [Future Roadmap](#%EF%B8%8F-future-roadmap) | ⚙️ [Configuration Reference](#%EF%B8%8F-configuration-reference) | 🧪 [Testing & Resilience](#-testing--resilience-matrix) |
+| | 🔍 [Limitations](#-architectural-considerations--limitations) | |
 
 ---
 
@@ -57,19 +44,17 @@ NORMAL/WARNING/CRITICAL                        logs/metrics.csv                 
 The central server renders a real-time terminal UI summarizing active fleet topology, resource consumption, and health statuses:
 
 ```text
-╔════════════════════════════════════════════════════════════════════════════════════════════════════════════════╗
-║                               LINUX RESOURCE MONITORING SYSTEM - FLEET DASHBOARD                               ║
-╠════════════════════════════════════════════════════════════════════════════════════════════════════════════════╣
-║ Active Nodes: 3 │ Healthy: 2 │ Warnings: 0 │ Critical: 1 │ Port: 5000 │ Server Uptime: 04h 22m 15s             ║
-╠════════════════════════════════════════════════════════════════════════════════════════════════════════════════╣
-║ CLIENT ID │ HOSTNAME       │ KERNEL       │ CPU USAGE          │ MEMORY USAGE       │ DISK       │ STATUS      ║
-╠════════════════════════════════════════════════════════════════════════════════════════════════════════════════╣
-║ PC-945742 │ prod-web-01    │ 6.8.0-45-gen │ [████░░░░░░] 42.5% │ [██████░░░░] 61.3% │ 72.1% (OK) │ NORMAL 🟢   ║
-║ PC-812049 │ db-replica-2   │ 6.5.0-28-gen │ [█████████░] 94.8% │ [████████░░] 81.2% │ 88.4% (OK) │ CRIT 🔴     ║
-║ PC-339104 │ worker-node4   │ 5.15.0-105   │ [██░░░░░░░░] 21.0% │ [███░░░░░░░] 34.5% │ 41.0% (OK) │ NORMAL 🟢   ║
-╠════════════════════════════════════════════════════════════════════════════════════════════════════════════════╣
-║ [LATEST EVENT] 2026-10-04 08:15:22 - ALERT [CRITICAL]: Host 'db-replica-2' CPU exceeded 90.0% threshold (94.8%)║
-╚════════════════════════════════════════════════════════════════════════════════════════════════════════════════╝
+==============================================
+           LINUX SYSTEM MONITOR
+==============================================
+
+Client ID      Hostname       CPU %     Memory %    Disk %    Processes   Status
+--------------------------------------------------------------------------
+PC-945742      Ubuntu         24.2      70.7        34.1      310         WARNING
+
+--------------------------------------------------------------------------
+Total Clients: 1
+Dashboard refresh interval: 2 seconds
 ```
 
 ---
