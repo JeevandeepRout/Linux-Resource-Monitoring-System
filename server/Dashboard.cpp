@@ -31,7 +31,6 @@ void Dashboard::display(
     std::cout
         << "--------------------------------------------------------------------------\n";
 
-
     if (clients.empty())
     {
         std::cout
@@ -70,7 +69,6 @@ void Dashboard::display(
         }
     }
 
-
     std::cout
         << "\n--------------------------------------------------------------------------\n";
 
@@ -83,10 +81,7 @@ void Dashboard::display(
         << "Dashboard refresh interval: 2 seconds\n";
 }
 
-
-// ============================================================
 // DASHBOARD REFRESH
-// ============================================================
 
 void Dashboard::startRefresh(
     ClientRegistry& registry,

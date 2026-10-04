@@ -6,10 +6,7 @@
 #include <arpa/inet.h>
 #include <sys/socket.h>
 
-
-// ============================================================
 // CONSTRUCTOR
-// ============================================================
 
 NetworkClient::NetworkClient()
     : socketFd(-1),
@@ -17,10 +14,7 @@ NetworkClient::NetworkClient()
 {
 }
 
-
-// ============================================================
 // CONNECT TO SERVER
-// ============================================================
 
 bool NetworkClient::connectToServer(
     const std::string& host,
@@ -36,14 +30,12 @@ bool NetworkClient::connectToServer(
 
     connected = false;
 
-
     // Create socket
     socketFd = socket(
         AF_INET,
         SOCK_STREAM,
         0
     );
-
 
     if (socketFd < 0)
     {
@@ -53,7 +45,6 @@ bool NetworkClient::connectToServer(
         return false;
     }
 
-
     sockaddr_in serverAddress{};
 
     serverAddress.sin_family =
@@ -61,7 +52,6 @@ bool NetworkClient::connectToServer(
 
     serverAddress.sin_port =
         htons(port);
-
 
     // Convert IP address
     if (inet_pton(
@@ -82,7 +72,6 @@ bool NetworkClient::connectToServer(
         return false;
     }
 
-
     // Connect
     if (connect(
         socketFd,
@@ -99,7 +88,6 @@ bool NetworkClient::connectToServer(
         return false;
     }
 
-
     connected = true;
 
     std::cout
@@ -112,10 +100,7 @@ bool NetworkClient::connectToServer(
     return true;
 }
 
-
-// ============================================================
 // SEND MESSAGE
-// ============================================================
 
 bool NetworkClient::sendMessage(
     const std::string& message
@@ -126,14 +111,12 @@ bool NetworkClient::sendMessage(
         return false;
     }
 
-
     ssize_t bytesSent = send(
         socketFd,
         message.c_str(),
         message.size(),
         0
     );
-
 
     if (bytesSent < 0)
     {
@@ -149,14 +132,10 @@ bool NetworkClient::sendMessage(
         return false;
     }
 
-
     return true;
 }
 
-
-// ============================================================
 // DISCONNECT
-// ============================================================
 
 void NetworkClient::disconnect()
 {
@@ -170,10 +149,7 @@ void NetworkClient::disconnect()
     connected = false;
 }
 
-
-// ============================================================
 // CHECK CONNECTION
-// ============================================================
 
 bool NetworkClient::isConnected() const
 {

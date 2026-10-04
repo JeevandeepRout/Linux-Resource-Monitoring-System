@@ -7,21 +7,13 @@
 
 namespace fs = std::filesystem;
 
-
-// ============================================================
 // Get Client ID
-// ============================================================
-
 std::string ClientIdentity::getClientId()
 {
     return loadOrCreateId();
 }
 
-
-// ============================================================
 // Load existing ID or create a new one
-// ============================================================
-
 std::string ClientIdentity::loadOrCreateId()
 {
     const char* homeDirectory = std::getenv("HOME");
@@ -33,25 +25,18 @@ std::string ClientIdentity::loadOrCreateId()
         );
     }
 
-
     // ~/.linux-monitor
     fs::path directory =
         fs::path(homeDirectory) / ".linux-monitor";
 
-
     // Create directory if it doesn't exist
     fs::create_directories(directory);
-
 
     // ~/.linux-monitor/client_id
     fs::path idFile =
         directory / "client_id";
 
-
-    // --------------------------------------------------------
     // Try to read existing ID
-    // --------------------------------------------------------
-
     std::ifstream inputFile(idFile);
 
     if (inputFile)
@@ -66,11 +51,7 @@ std::string ClientIdentity::loadOrCreateId()
         }
     }
 
-
-    // --------------------------------------------------------
     // Generate new ID
-    // --------------------------------------------------------
-
     std::random_device randomDevice;
 
     std::mt19937 generator(randomDevice());
@@ -80,15 +61,10 @@ std::string ClientIdentity::loadOrCreateId()
         999999
     );
 
-
     std::string clientId =
         "PC-" + std::to_string(distribution(generator));
 
-
-    // --------------------------------------------------------
     // Save ID
-    // --------------------------------------------------------
-
     std::ofstream outputFile(idFile);
 
     if (!outputFile)
@@ -99,7 +75,6 @@ std::string ClientIdentity::loadOrCreateId()
     }
 
     outputFile << clientId;
-
 
     return clientId;
 }

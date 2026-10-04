@@ -19,18 +19,12 @@
 
 using json = nlohmann::json;
 
-
-// ============================================================
 // GLOBAL SHUTDOWN FLAG
-// ============================================================
 
 volatile sig_atomic_t shutdownRequested = 0;
 
-
-// ============================================================
 // SIGNAL HANDLER
 // Ctrl + C sends SIGINT
-// ============================================================
 
 void handleSignal(int signal)
 {
@@ -40,10 +34,7 @@ void handleSignal(int signal)
     }
 }
 
-
-// ============================================================
 // CONSTRUCTOR
-// ============================================================
 
 Server::Server(int port)
     : port(port),
@@ -63,10 +54,7 @@ Server::Server(int port)
 {
 }
 
-
-// ============================================================
 // DESTRUCTOR
-// ============================================================
 
 Server::~Server()
 {
@@ -77,10 +65,7 @@ Server::~Server()
     }
 }
 
-
-// ============================================================
 // CREATE SOCKET
-// ============================================================
 
 void Server::createSocket()
 {
@@ -101,7 +86,6 @@ void Server::createSocket()
     std::cout
         << "Socket created successfully.\n";
 
-
     // Allow port reuse
     int option = 1;
 
@@ -113,10 +97,7 @@ void Server::createSocket()
         sizeof(option)
     );
 
-
-    // ========================================================
     // MAKE LISTENING SOCKET NON-BLOCKING
-    // ========================================================
 
     int flags = fcntl(
         serverSocket,
@@ -135,7 +116,6 @@ void Server::createSocket()
         exit(EXIT_FAILURE);
     }
 
-
     if (fcntl(
         serverSocket,
         F_SETFL,
@@ -152,10 +132,7 @@ void Server::createSocket()
     }
 }
 
-
-// ============================================================
 // BIND SOCKET
-// ============================================================
 
 void Server::bindSocket()
 {
@@ -169,7 +146,6 @@ void Server::bindSocket()
 
     serverAddress.sin_port =
         htons(port);
-
 
     if (bind(
         serverSocket,
@@ -192,10 +168,7 @@ void Server::bindSocket()
         << ".\n";
 }
 
-
-// ============================================================
 // LISTEN
-// ============================================================
 
 void Server::listenForClients()
 {
@@ -217,10 +190,7 @@ void Server::listenForClients()
         << "Server is listening...\n";
 }
 
-
-// ============================================================
 // DETERMINE STATUS
-// ============================================================
 
 std::string Server::determineStatus(
     double cpuUsage,
@@ -249,18 +219,13 @@ std::string Server::determineStatus(
     return "NORMAL";
 }
 
-
-// ============================================================
 // ACCEPT CLIENTS
-// ============================================================
 
 void Server::acceptClients()
 {
     while (running)
     {
-        // ====================================================
         // CHECK CTRL+C
-        // ====================================================
 
         if (shutdownRequested)
         {
@@ -268,12 +233,10 @@ void Server::acceptClients()
             break;
         }
 
-
         sockaddr_in clientAddress{};
 
         socklen_t clientLength =
             sizeof(clientAddress);
-
 
         int clientSocket = accept(
             serverSocket,
@@ -281,10 +244,7 @@ void Server::acceptClients()
             &clientLength
         );
 
-
-        // ====================================================
         // NO CONNECTION AVAILABLE
-        // ====================================================
 
         if (clientSocket < 0)
         {
@@ -300,13 +260,11 @@ void Server::acceptClients()
                 continue;
             }
 
-
             // Server is shutting down
             if (!running)
             {
                 break;
             }
-
 
             std::cerr
                 << "Accept failed.\n";
@@ -314,10 +272,7 @@ void Server::acceptClients()
             continue;
         }
 
-
-        // ====================================================
         // GET CLIENT IP
-        // ====================================================
 
         char clientIp[INET_ADDRSTRLEN];
 
@@ -328,21 +283,16 @@ void Server::acceptClients()
             INET_ADDRSTRLEN
         );
 
-
         std::string ipAddress(
             clientIp
         );
-
 
         std::cout
             << "\nNew client connected from "
             << ipAddress
             << ".\n";
 
-
-        // ====================================================
         // CREATE CLIENT THREAD
-        // ====================================================
 
         std::thread(
             &Server::handleClient,
@@ -352,15 +302,11 @@ void Server::acceptClients()
         ).detach();
     }
 
-
     std::cout
         << "Stopped accepting new clients.\n";
 }
 
-
-// ============================================================
 // HANDLE CLIENT
-// ============================================================
 
 void Server::handleClient(
     int clientSocket,
@@ -372,11 +318,9 @@ void Server::handleClient(
         << clientIp
         << ".\n";
 
-
     std::string receiveBuffer;
 
     char buffer[4096];
-
 
     while (running)
     {
@@ -386,7 +330,6 @@ void Server::handleClient(
             sizeof(buffer)
         );
 
-
         ssize_t bytesReceived =
             recv(
                 clientSocket,
@@ -395,20 +338,14 @@ void Server::handleClient(
                 0
             );
 
-
-        // ====================================================
         // CLIENT DISCONNECTED
-        // ====================================================
 
         if (bytesReceived == 0)
         {
             break;
         }
 
-
-        // ====================================================
         // RECEIVE ERROR
-        // ====================================================
 
         if (bytesReceived < 0)
         {
@@ -423,24 +360,17 @@ void Server::handleClient(
             break;
         }
 
-
-        // ====================================================
         // ADD RECEIVED DATA TO BUFFER
-        // ====================================================
 
         receiveBuffer.append(
             buffer,
             bytesReceived
         );
 
-
-        // ====================================================
         // TCP FRAMING
         // Messages are separated by '\n'
-        // ====================================================
 
         size_t newlinePosition;
-
 
         while (
             (newlinePosition =
@@ -454,13 +384,11 @@ void Server::handleClient(
                     newlinePosition
                 );
 
-
             // Remove processed message
             receiveBuffer.erase(
                 0,
                 newlinePosition + 1
             );
-
 
             // Ignore empty messages
             if (message.empty())
@@ -468,20 +396,14 @@ void Server::handleClient(
                 continue;
             }
 
-
             try
             {
-                // ============================================
                 // PARSE JSON
-                // ============================================
 
                 json data =
                     json::parse(message);
 
-
-                // ============================================
                 // PRETTY PRINT JSON
-                // ============================================
 
                 std::cout
                     << "\n";
@@ -493,10 +415,7 @@ void Server::handleClient(
                     << data.dump(4)
                     << "\n";
 
-
-                // ============================================
                 // REQUIRED FIELDS
-                // ============================================
 
                 const std::vector<std::string>
                     requiredFields =
@@ -513,9 +432,7 @@ void Server::handleClient(
                     "timestamp"
                 };
 
-
                 bool valid = true;
-
 
                 for (
                     const auto& field :
@@ -533,7 +450,6 @@ void Server::handleClient(
                     }
                 }
 
-
                 if (!valid)
                 {
                     std::cerr
@@ -542,10 +458,7 @@ void Server::handleClient(
                     continue;
                 }
 
-
-                // ============================================
                 // CHECK MESSAGE TYPE
-                // ============================================
 
                 if (
                     !data["type"].is_string() ||
@@ -558,10 +471,7 @@ void Server::handleClient(
                     continue;
                 }
 
-
-                // ============================================
                 // EXTRACT VALUES
-                // ============================================
 
                 std::string clientId =
                     data["client_id"];
@@ -590,10 +500,7 @@ void Server::handleClient(
                 long long timestamp =
                     data["timestamp"];
 
-
-                // ============================================
                 // RANGE VALIDATION
-                // ============================================
 
                 if (
                     cpuUsage < 0 ||
@@ -606,7 +513,6 @@ void Server::handleClient(
                     continue;
                 }
 
-
                 if (
                     memoryUsage < 0 ||
                     memoryUsage > 100
@@ -617,7 +523,6 @@ void Server::handleClient(
 
                     continue;
                 }
-
 
                 if (
                     diskUsage < 0 ||
@@ -630,7 +535,6 @@ void Server::handleClient(
                     continue;
                 }
 
-
                 if (processCount < 0)
                 {
                     std::cerr
@@ -638,7 +542,6 @@ void Server::handleClient(
 
                     continue;
                 }
-
 
                 if (uptimeSeconds < 0)
                 {
@@ -648,10 +551,7 @@ void Server::handleClient(
                     continue;
                 }
 
-
-                // ============================================
                 // CREATE SYSTEM DATA
-                // ============================================
 
                 SystemData metrics;
 
@@ -682,10 +582,7 @@ void Server::handleClient(
                 metrics.timestamp =
                     timestamp;
 
-
-                // ============================================
                 // DETERMINE STATUS
-                // ============================================
 
                 std::string status =
                     determineStatus(
@@ -694,19 +591,13 @@ void Server::handleClient(
                         diskUsage
                     );
 
-
-                // ============================================
                 // ALERT MANAGER
-                // ============================================
 
                 alertManager.checkAlerts(
                     metrics
                 );
 
-
-                // ============================================
                 // CREATE CLIENT STATE
-                // ============================================
 
                 ClientState client;
 
@@ -736,10 +627,7 @@ void Server::handleClient(
                 client.connected =
                     true;
 
-
-                // ============================================
                 // UPDATE CLIENT REGISTRY
-                // ============================================
 
                 {
                     std::lock_guard<std::mutex>
@@ -750,10 +638,7 @@ void Server::handleClient(
                     );
                 }
 
-
-                // ============================================
                 // PRINT CLIENT INFORMATION
-                // ============================================
 
                 std::cout
                     << "Client: "
@@ -770,10 +655,7 @@ void Server::handleClient(
                     << client.lastSeen
                     << "\n";
 
-
-                // ============================================
                 // CREATE ACK
-                // ============================================
 
                 json ack;
 
@@ -791,14 +673,10 @@ void Server::handleClient(
                         .time_since_epoch()
                     ).count();
 
-
                 std::string ackMessage =
                     ack.dump() + "\n";
 
-
-                // ============================================
                 // SEND ACK
-                // ============================================
 
                 send(
                     clientSocket,
@@ -806,7 +684,6 @@ void Server::handleClient(
                     ackMessage.size(),
                     0
                 );
-
 
                 std::cout
                     << "ACK sent to client.\n";
@@ -832,13 +709,9 @@ void Server::handleClient(
         }
     }
 
-
-    // ========================================================
     // CLOSE CLIENT SOCKET
-    // ========================================================
 
     close(clientSocket);
-
 
     std::cout
         << "Client disconnected: "
@@ -846,10 +719,7 @@ void Server::handleClient(
         << ".\n";
 }
 
-
-// ============================================================
 // OFFLINE CLIENT CHECK
-// ============================================================
 
 void Server::checkOfflineClients()
 {
@@ -860,12 +730,10 @@ void Server::checkOfflineClients()
             std::chrono::seconds(5)
         );
 
-
         if (!running)
         {
             break;
         }
-
 
         long long currentTime =
             std::chrono::duration_cast<
@@ -875,13 +743,9 @@ void Server::checkOfflineClients()
                 .time_since_epoch()
             ).count();
 
-
         std::vector<ClientState> clients;
 
-
-        // ====================================================
         // GET PROTECTED COPY OF CLIENTS
-        // ====================================================
 
         {
             std::lock_guard<std::mutex>
@@ -891,10 +755,7 @@ void Server::checkOfflineClients()
                 clientRegistry.getAll();
         }
 
-
-        // ====================================================
         // CHECK EACH CLIENT
-        // ====================================================
 
         for (
             const auto& client :
@@ -905,7 +766,6 @@ void Server::checkOfflineClients()
                 currentTime -
                 client.lastSeen;
 
-
             if (
                 elapsed > offlineTimeout &&
                 client.status != "OFFLINE"
@@ -914,17 +774,13 @@ void Server::checkOfflineClients()
                 ClientState updatedClient =
                     client;
 
-
                 updatedClient.status =
                     "OFFLINE";
 
                 updatedClient.connected =
                     false;
 
-
-                // ============================================
                 // UPDATE REGISTRY
-                // ============================================
 
                 {
                     std::lock_guard<std::mutex>
@@ -935,7 +791,6 @@ void Server::checkOfflineClients()
                     );
                 }
 
-
                 std::cout
                     << "Client "
                     << client.clientId
@@ -945,10 +800,7 @@ void Server::checkOfflineClients()
     }
 }
 
-
-// ============================================================
 // GET CLIENT SNAPSHOT
-// ============================================================
 
 std::vector<ClientState>
 Server::getClientSnapshot()
@@ -959,10 +811,7 @@ Server::getClientSnapshot()
     return clientRegistry.getAll();
 }
 
-
-// ============================================================
 // GRACEFUL SHUTDOWN
-// ============================================================
 
 void Server::requestShutdown()
 {
@@ -971,14 +820,11 @@ void Server::requestShutdown()
         return;
     }
 
-
     std::cout
         << "\nStopping server...\n";
 
-
     // Stop all server loops
     running = false;
-
 
     // Close listening socket
     if (serverSocket != -1)
@@ -989,47 +835,30 @@ void Server::requestShutdown()
     }
 }
 
-
-// ============================================================
 // START SERVER
-// ============================================================
 
 void Server::start()
 {
-    // ========================================================
     // CREATE SOCKET
-    // ========================================================
 
     createSocket();
 
-
-    // ========================================================
     // BIND SOCKET
-    // ========================================================
 
     bindSocket();
 
-
-    // ========================================================
     // LISTEN
-    // ========================================================
 
     listenForClients();
 
-
-    // ========================================================
     // REGISTER CTRL+C HANDLER
-    // ========================================================
 
     std::signal(
         SIGINT,
         handleSignal
     );
 
-
-    // ========================================================
     // START DASHBOARD
-    // ========================================================
 
     std::thread([this]()
     {
@@ -1039,27 +868,18 @@ void Server::start()
         );
     }).detach();
 
-
-    // ========================================================
     // START OFFLINE CLIENT CHECKER
-    // ========================================================
 
     std::thread(
         &Server::checkOfflineClients,
         this
     ).detach();
 
-
-    // ========================================================
     // ACCEPT CLIENTS
-    // ========================================================
 
     acceptClients();
 
-
-    // ========================================================
     // SERVER SHUTDOWN COMPLETE
-    // ========================================================
 
     std::cout
         << "Server shutdown complete.\n";

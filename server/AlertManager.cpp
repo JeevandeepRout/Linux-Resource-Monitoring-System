@@ -2,10 +2,7 @@
 
 #include <iostream>
 
-
-// ============================================================
 // Determine Alert State
-// ============================================================
 
 std::string AlertManager::determineAlertState(
     const SystemData& data)
@@ -19,7 +16,6 @@ std::string AlertManager::determineAlertState(
         return "CRITICAL";
     }
 
-
     // Warning condition
 
     if (data.cpuUsage >= 70 ||
@@ -29,16 +25,12 @@ std::string AlertManager::determineAlertState(
         return "WARNING";
     }
 
-
     // Normal condition
 
     return "NORMAL";
 }
 
-
-// ============================================================
 // Print Alert
-// ============================================================
 
 void AlertManager::printAlert(
     const SystemData& data,
@@ -67,10 +59,7 @@ void AlertManager::printAlert(
     }
 }
 
-
-// ============================================================
 // Check Alerts
-// ============================================================
 
 void AlertManager::checkAlerts(
     const SystemData& data)
@@ -80,22 +69,17 @@ void AlertManager::checkAlerts(
     std::string newState =
         determineAlertState(data);
 
-
     // Look for previous state
 
     auto it =
         clientAlertStates.find(data.clientId);
 
-
-    // ========================================================
     // First time seeing this client
-    // ========================================================
 
     if (it == clientAlertStates.end())
     {
         clientAlertStates[data.clientId] =
             newState;
-
 
         // Only print an alert if the initial state
         // is WARNING or CRITICAL.
@@ -108,28 +92,19 @@ void AlertManager::checkAlerts(
         return;
     }
 
-
-    // ========================================================
     // Previous state
-    // ========================================================
 
     std::string previousState =
         it->second;
 
-
-    // ========================================================
     // State has not changed
-    // ========================================================
 
     if (previousState == newState)
     {
         return;
     }
 
-
-    // ========================================================
     // State changed
-    // ========================================================
 
     clientAlertStates[data.clientId] =
         newState;

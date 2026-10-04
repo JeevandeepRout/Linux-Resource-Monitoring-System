@@ -13,17 +13,11 @@
 
 using json = nlohmann::json;
 
-
-// ============================================================
 // SHUTDOWN FLAG
-// ============================================================
 
 volatile sig_atomic_t shutdownRequested = 0;
 
-
-// ============================================================
 // CTRL+C HANDLER
-// ============================================================
 
 void handleSignal(int signal)
 {
@@ -33,12 +27,9 @@ void handleSignal(int signal)
     }
 }
 
-
-// ============================================================
 // OLD CODE — PHASE 24
 // Simple "Hello from client" TCP test
 // Kept in comment mode.
-// ============================================================
 
 /*
 
@@ -68,8 +59,6 @@ int main()
 
 */
 
-
-// ============================================================
 // PHASE 47
 // Client Reconnection
 //
@@ -80,26 +69,21 @@ int main()
 // If the connection is lost:
 //     Disconnect
 //     Try reconnecting
-// ============================================================
 
 int main()
 {
     try
     {
-        // ----------------------------------------------------
         // Register Ctrl+C handler
-        // ----------------------------------------------------
 
         std::signal(
             SIGINT,
             handleSignal
         );
-        
+
         std::signal(SIGPIPE, SIG_IGN);
 
-        // ----------------------------------------------------
         // Create objects
-        // ----------------------------------------------------
 
         SystemMonitor monitor;
 
@@ -107,10 +91,7 @@ int main()
 
         ClientIdentity identity;
 
-
-        // ----------------------------------------------------
         // Server configuration
-        // ----------------------------------------------------
 
         const std::string serverHost =
             "127.0.0.1";
@@ -118,38 +99,26 @@ int main()
         const int serverPort =
             5000;
 
-
-        // ----------------------------------------------------
         // Reconnection interval
-        // ----------------------------------------------------
 
         const int retryInterval =
             5;
 
-
-        // ----------------------------------------------------
         // Client identity
-        // ----------------------------------------------------
 
         std::string clientId =
             identity.getClientId();
-
 
         std::cout
             << "Client ID: "
             << clientId
             << "\n";
 
-
-        // ----------------------------------------------------
         // Main client loop
-        // ----------------------------------------------------
 
         while (!shutdownRequested)
         {
-            // =================================================
             // CONNECT TO SERVER
-            // =================================================
 
             if (!client.isConnected())
             {
@@ -159,7 +128,6 @@ int main()
                     << ":"
                     << serverPort
                     << "...\n";
-
 
                 if (!client.connectToServer(
                         serverHost,
@@ -172,7 +140,6 @@ int main()
                         << "Retrying in "
                         << retryInterval
                         << " seconds...\n";
-
 
                     // Wait before reconnecting
                     for (
@@ -190,44 +157,31 @@ int main()
                     continue;
                 }
 
-
                 std::cout
                     << "Connection established.\n";
             }
 
-
-            // =================================================
             // COLLECT SYSTEM INFORMATION
-            // =================================================
 
             SystemData data =
                 monitor.collect();
 
-
-            // -------------------------------------------------
             // Set persistent client ID
-            // -------------------------------------------------
 
             data.clientId =
                 clientId;
 
-
-            // -------------------------------------------------
             // Set timestamp
-            // -------------------------------------------------
 
             data.timestamp =
                 std::chrono::duration_cast<
                     std::chrono::seconds
                 >(
                     std::chrono::system_clock::now()
-                    .time_since_epoch()
+                        .time_since_epoch()
                 ).count();
 
-
-            // =================================================
             // CONVERT SYSTEM DATA TO JSON
-            // =================================================
 
             json message;
 
@@ -261,10 +215,7 @@ int main()
             message["timestamp"] =
                 data.timestamp;
 
-
-            // =================================================
             // DISPLAY JSON
-            // =================================================
 
             std::cout
                 << "\nJSON message:\n";
@@ -273,14 +224,10 @@ int main()
                 << message.dump(4)
                 << "\n";
 
-
-            // =================================================
             // SEND JSON
-            // =================================================
 
             std::string jsonMessage =
                 message.dump() + "\n";
-
 
             if (client.sendMessage(
                     jsonMessage))
@@ -290,9 +237,7 @@ int main()
             }
             else
             {
-                // =============================================
                 // CONNECTION LOST
-                // =============================================
 
                 std::cerr
                     << "\nConnection to server lost.\n";
@@ -300,16 +245,12 @@ int main()
                 std::cerr
                     << "Starting reconnection process...\n";
 
-
                 client.disconnect();
 
                 continue;
             }
 
-
-            // =================================================
             // WAIT BEFORE NEXT METRIC
-            // =================================================
 
             for (
                 int i = 0;
@@ -324,17 +265,12 @@ int main()
             }
         }
 
-
-        // =====================================================
         // GRACEFUL CLIENT SHUTDOWN
-        // =====================================================
 
         std::cout
             << "\nStopping client...\n";
 
-
         client.disconnect();
-
 
         std::cout
             << "Client shutdown complete.\n";
@@ -348,7 +284,6 @@ int main()
 
         return 1;
     }
-
 
     return 0;
 }

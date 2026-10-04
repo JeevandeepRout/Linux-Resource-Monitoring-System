@@ -1,92 +1,111 @@
-#include "Logger.h"
+#include "Dashboard.h"
 
-#include <fstream>
 #include <iostream>
-#include <chrono>
-#include <ctime>
 #include <iomanip>
+#include <thread>
+#include <chrono>
+#include <atomic>
 
-std::mutex Logger::logMutex;
-
-
-// ============================================================
-// Write Log
-// ============================================================
-
-void Logger::writeLog(
-    const std::string& level,
-    const std::string& message)
+void Dashboard::display(
+    const std::vector<ClientState>& clients
+)
 {
-    std::lock_guard<std::mutex> lock(logMutex);
+    // Clear terminal screen
+    std::cout << "\033[2J\033[H";
 
-    std::ofstream logFile(
-        "logs/server.log",
-        std::ios::app
-    );
+    std::cout << "==============================================\n";
+    std::cout << "           LINUX SYSTEM MONITOR\n";
+    std::cout << "==============================================\n\n";
 
-    if (!logFile.is_open())
+    std::cout
+        << std::left
+        << std::setw(15) << "Client ID"
+        << std::setw(15) << "Hostname"
+        << std::setw(10) << "CPU %"
+        << std::setw(12) << "Memory %"
+        << std::setw(10) << "Disk %"
+        << std::setw(12) << "Processes"
+        << std::setw(12) << "Status"
+        << "\n";
+
+    std::cout
+        << "--------------------------------------------------------------------------\n";
+
+    if (clients.empty())
     {
-        std::cerr
-            << "Failed to open log file.\n";
+        std::cout
+            << "\nNo clients connected.\n";
+    }
+    else
+    {
+        for (const auto& client : clients)
+        {
+            std::cout
+                << std::left
+                << std::setw(15)
+                << client.clientId
 
-        return;
+                << std::setw(15)
+                << client.hostname
+
+                << std::setw(10)
+                << std::fixed
+                << std::setprecision(1)
+                << client.latestMetrics.cpuUsage
+
+                << std::setw(12)
+                << client.latestMetrics.memoryUsage
+
+                << std::setw(10)
+                << client.latestMetrics.diskUsage
+
+                << std::setw(12)
+                << client.latestMetrics.processCount
+
+                << std::setw(12)
+                << client.status
+
+                << "\n";
+        }
     }
 
+    std::cout
+        << "\n--------------------------------------------------------------------------\n";
 
-    // Get current time
+    std::cout
+        << "Total Clients: "
+        << clients.size()
+        << "\n";
 
-    auto now =
-        std::chrono::system_clock::now();
-
-    std::time_t currentTime =
-        std::chrono::system_clock::to_time_t(now);
-
-
-    logFile
-        << "["
-        << std::put_time(
-               std::localtime(&currentTime),
-               "%Y-%m-%d %H:%M:%S"
-           )
-        << "] "
-        << "["
-        << level
-        << "] "
-        << message
-        << '\n';
-
-    logFile.close();
+    std::cout
+        << "Dashboard refresh interval: 2 seconds\n";
 }
 
+// DASHBOARD REFRESH
 
-// ============================================================
-// INFO
-// ============================================================
-
-void Logger::info(
-    const std::string& message)
+void Dashboard::startRefresh(
+    ClientRegistry& registry,
+    std::atomic<bool>& running
+)
 {
-    writeLog("INFO", message);
-}
+    while (running)
+    {
+        // Get current clients
+        std::vector<ClientState> clients =
+            registry.getAll();
 
+        // Display dashboard
+        display(clients);
 
-// ============================================================
-// WARNING
-// ============================================================
+        // Refresh every 2 seconds
+        for (int i = 0; i < 20 && running; ++i)
+        {
+            std::this_thread::sleep_for(
+                std::chrono::milliseconds(100)
+            );
+        }
+    }
 
-void Logger::warning(
-    const std::string& message)
-{
-    writeLog("WARNING", message);
-}
-
-
-// ============================================================
-// ERROR
-// ============================================================
-
-void Logger::error(
-    const std::string& message)
-{
-    writeLog("ERROR", message);
+    std::cout
+        << "\nDashboard stopped.\n";
 }

@@ -1,9 +1,6 @@
 #include "ClientRegistry.h"
 
-
-// ============================================================
 // Add or update a client
-// ============================================================
 
 void ClientRegistry::addOrUpdate(
     const ClientState& client)
@@ -11,10 +8,7 @@ void ClientRegistry::addOrUpdate(
     clients[client.clientId] = client;
 }
 
-
-// ============================================================
 // Remove a client
-// ============================================================
 
 void ClientRegistry::remove(
     const std::string& clientId)
@@ -22,10 +16,7 @@ void ClientRegistry::remove(
     clients.erase(clientId);
 }
 
-
-// ============================================================
 // Get one client
-// ============================================================
 
 bool ClientRegistry::get(
     const std::string& clientId,
@@ -43,10 +34,7 @@ bool ClientRegistry::get(
     return true;
 }
 
-
-// ============================================================
 // Get all clients
-// ============================================================
 
 std::vector<ClientState> ClientRegistry::getAll()
 {
