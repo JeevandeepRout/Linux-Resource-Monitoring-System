@@ -1,6 +1,6 @@
 # Linux Resource Monitoring System
 
-A distributed, event-driven Linux system monitoring suite engineered for low-overhead fleet observability. Probes kernel metrics directly from the `/proc` virtual filesystem and POSIX `statvfs` APIs, streaming real-time system vitals over framed TCP sockets to a central multi-client server featuring dynamic multi-tier anomaly alerting, historical CSV persistence, and an interactive terminal dashboard.
+A lightweight, client-server monitoring tool for Linux. The client reads real-time resource usage directly from the operating system for minimal overhead and streams the data to a central server. The server aggregates this telemetry to provide a live terminal dashboard, automated anomaly alerts, and historical CSV logging.
 
 [Live Terminal Preview](#%EF%B8%8F-dashboard-preview) • [Features](#-key-features) • [Architecture](#-how-it-works) • [Wire Protocol](#-wire-protocol) • [Quick Start](#-quick-start) • [Project Structure](#-project-structure) • [Testing & Resilience](#-testing--resilience-matrix) • [Future Roadmap](#%EF%B8%8F-future-roadmap)
 
