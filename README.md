@@ -1,4 +1,4 @@
-# Linux Resource Monitoring System
+# Linux Resource Monitoring System 💻
 
 A lightweight, client-server monitoring tool for Linux. The client reads real-time resource usage directly from the operating system for minimal overhead and streams the data to a central server. The server aggregates this telemetry to provide a live terminal dashboard, automated anomaly alerts, and historical CSV logging.
 
