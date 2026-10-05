@@ -1,5 +1,8 @@
 # Linux Resource Monitoring System 💻
 
+**Tech Stack:** C++17 · GCC/g++ · GNU Make · POSIX TCP Sockets · Linux `/proc` · nlohmann/json · C++ Threads · Atomics · CSV · Git/GitHub · Ubuntu/Linux
+
+
 A lightweight, client-server monitoring tool for Linux. The client reads real-time resource usage directly from the operating system for minimal overhead and streams the data to a central server. The server aggregates this telemetry to provide a live terminal dashboard, automated anomaly alerts, and historical CSV logging.
 
 [Live Terminal Preview](#%EF%B8%8F-dashboard-preview) • [Features](#-key-features) • [Architecture](#-how-it-works) • [Wire Protocol](#-wire-protocol) • [Quick Start](#-quick-start) • [Project Structure](#-project-structure) • [Testing & Resilience](#-testing--resilience-matrix) • [Future Roadmap](#%EF%B8%8F-future-roadmap)
